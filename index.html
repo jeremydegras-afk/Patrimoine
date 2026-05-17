@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0A2540">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Patrimoine">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Mon Patrimoine</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --navy: #0A2540;
+    --navy-soft: #15355C;
+    --blue: #1E5FCB;
+    --blue-soft: #5A8FE0;
+    --blue-light: #B8CDE8;
+    --blue-bg: #EEF3FA;
+    --red: #B3261E;
+    --red-bg: #FBEBEC;
+    --bg: #F7F8FA;
+    --surface: #FFFFFF;
+    --border: #D5DCE5;
+    --border-soft: #EEF1F5;
+    --text: #0A2540;
+    --text-2: #6B7B8E;
+    --text-3: #B8C3D2;
+  }
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; }
+  input[type=number] { -moz-appearance: textfield; }
+  input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .nav-btn.active { color: var(--blue) !important; font-weight: 500; }
+  .nav-btn.active .nav-label { font-weight: 500; }
+  .toast { animation: toastIn 0.3s ease-out; }
+  @keyframes toastIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .num-input { background: #fff; border: 0.5px solid var(--border); border-radius: 6px; padding: 8px 9px; font-size: 13px; width: 100%; outline: none; color: var(--text); }
+  .num-input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(30,95,203,0.15); }
+  .num-input.has-dca { color: var(--blue); font-weight: 500; }
+  .num-input.saved { background: #fff; border-color: var(--blue-light); }
+  .pill { font-size: 10px; font-weight: 500; padding: 3px 7px; border-radius: 5px; letter-spacing: 0.2px; }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; }
+  .seg-tab { padding: 10px 6px; font-size: 12px; color: var(--text-2); border-bottom: 2px solid transparent; background: none; border-left: none; border-right: none; border-top: none; }
+  .seg-tab.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 500; }
+  .priv { letter-spacing: 1px; }
+  .chip { padding: 6px 10px; font-size: 11px; border-radius: 8px; background: #fff; border: 0.5px solid var(--border); color: var(--text-2); cursor: pointer; }
+  .chip.active { background: var(--navy); color: #fff; border-color: var(--navy); font-weight: 500; }
+  /* Hide scrollbar on horizontal scrollers */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  /* Safe area */
+  .safe-top { padding-top: env(safe-area-inset-top, 0); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+  body { background: var(--navy); } /* match status bar in standalone */
+
+  /* === Desktop : cadre téléphone === */
+  @media (min-width: 720px) {
+    body {
+      background: radial-gradient(ellipse at top, #1a3658 0%, #0A2540 60%, #061a30 100%);
+      min-height: 100vh;
+      padding: 32px 0;
+    }
+    .phone-wrap {
+      max-width: 400px !important;
+      margin: 0 auto !important;
+      border-radius: 44px !important;
+      box-shadow: 0 25px 70px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.3), 0 0 0 12px #1a1a1a, 0 0 0 13px #2a2a2a;
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-wrap nav {
+      position: absolute !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      max-width: none !important;
+      margin: 0 !important;
+    }
+    .phone-wrap main {
+      max-height: calc(100vh - 64px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .phone-wrap main::-webkit-scrollbar { width: 6px; }
+    .phone-wrap main::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+    /* Notch décoratif */
+    .phone-wrap::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 28px;
+      background: #1a1a1a;
+      border-radius: 0 0 18px 18px;
+      z-index: 100;
+    }
+    .desktop-hint {
+      display: block !important;
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.5);
+      font-size: 12px;
+      text-align: center;
+      letter-spacing: 0.3px;
+    }
+  }
+  .desktop-hint { display: none; }
+</style>
+</head>
+<body>
+
+<div class="max-w-md mx-auto min-h-screen relative phone-wrap" style="background:var(--bg);">
+
+  <!-- ============ NAVIGATION BOTTOM ============ -->
+  <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t safe-bottom" style="border-color:var(--border); z-index:50;">
+    <div class="flex justify-around py-2">
+      <button onclick="go('dashboard')" data-tab="dashboard" class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1" style="color:var(--text-2);background:none;border:none;">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13l9-9 9 9M5 12v8a1 1 0 001 1h3v-6h6v6h3a1 1 0 001-1v-8"/></svg>
+        <span class="nav-label text-[10px]">Accueil</span>
+      </button>
+      <button onclick="go('saisie')" data-tab="saisie" class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1" style="color:var(--text-2);background:none;border:none;">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.4-9.4a2 2 0 112.8 2.8L11.8 15H9v-2.8l8.6-8.6z"/></svg>
+        <span class="nav-label text-[10px]">Saisir</span>
+      </button>
+      <button onclick="go('analyse')" data-tab="analyse" class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1" style="color:var(--text-2);background:none;border:none;">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 14l3-3 4 4 5-7"/></svg>
+        <span class="nav-label text-[10px]">Analyse</span>
+      </button>
+      <button onclick="go('projection')" data-tab="projection" class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1" style="color:var(--text-2);background:none;border:none;">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 19l7-14 7 14M9 14h6"/></svg>
+        <span class="nav-label text-[10px]">Projection</span>
+      </button>
+      <button onclick="go('reglages')" data-tab="reglages" class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1" style="color:var(--text-2);background:none;border:none;">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.3c.4-1.7 2.9-1.7 3.3 0a1.7 1.7 0 002.6 1.1c1.5-.9 3.3.8 2.4 2.4a1.7 1.7 0 001 2.5c1.8.4 1.8 2.9 0 3.3a1.7 1.7 0 00-1 2.6c.9 1.5-.8 3.3-2.4 2.4a1.7 1.7 0 00-2.6 1c-.4 1.8-2.9 1.8-3.3 0a1.7 1.7 0 00-2.6-1c-1.5.9-3.3-.8-2.4-2.4a1.7 1.7 0 00-1-2.6c-1.8-.4-1.8-2.9 0-3.3a1.7 1.7 0 001-2.5c-.9-1.6.8-3.3 2.4-2.4 1 .6 2.3.1 2.6-1z"/><circle cx="12" cy="12" r="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="nav-label text-[10px]">Réglages</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============ ECRANS ============ -->
+  <main id="app" class="pb-24"></main>
+
+  <!-- ============ TOAST ============ -->
+  <div id="toast" class="hidden fixed left-1/2 -translate-x-1/2 bottom-24 toast text-white text-sm py-2 px-4 rounded-full shadow-lg z-50" style="background:var(--navy);"></div>
+
+</div>
+
+<div class="desktop-hint">Vue mobile · ajoute à l'écran d'accueil de ton téléphone pour l'expérience PWA</div>
+
+<script>
+// =============================================================
+// ÉTAT GLOBAL & PERSISTANCE
+// =============================================================
+const STORAGE_KEY = 'patrimoine_v1';
+
+const CATEGORIES = [
+  { id: 'av',     name: 'Assurance Vie', color: '#1E5FCB', defaultRdt: 2.5 },
+  { id: 'scpi',   name: 'SCPI',          color: '#5A8FE0', defaultRdt: 5.0 },
+  { id: 'pea',    name: 'PEA',           color: '#8DB4EC', defaultRdt: 7.0 },
+  { id: 'crypto', name: 'Crypto',        color: '#B3261E', defaultRdt: 10.0 },
+  { id: 'immo',   name: 'Immobilier',    color: '#0A2540', defaultRdt: 2.0 },
+  { id: 'livrets',name: 'Livrets',       color: '#B8CDE8', defaultRdt: 3.0 },
+  { id: 'anaxago',name: 'Private Equity',color: '#C9D3DF', defaultRdt: 8.0 }
+];
+
+// Données initiales — état au 30 avril 2026 (= début mai 2026)
+// Format historique : history[YYYY-MM][assetId] = { start, contribution, withdrawal, end }
+const INITIAL_ASSETS = [
+  { id:'mp',       name:'Meilleur Placement', catId:'av',      defaultDca: 0,   isLoyer:false },
+  { id:'uaf',      name:'UAF',                catId:'av',      defaultDca: 0,   isLoyer:false },
+  { id:'linxea',   name:'Linxea',             catId:'av',      defaultDca: 0,   isLoyer:false },
+  { id:'iroko',    name:'Iroko',              catId:'scpi',    defaultDca: 0,   isLoyer:false },
+  { id:'remake',   name:'Remake',             catId:'scpi',    defaultDca: 0,   isLoyer:false },
+  { id:'corum',    name:'Corum',              catId:'scpi',    defaultDca: 0,   isLoyer:false },
+  { id:'pea',      name:'PEA',                catId:'pea',     defaultDca: 0,   isLoyer:false },
+  { id:'peapme',   name:'PEA PME',            catId:'pea',     defaultDca: 0,   isLoyer:false },
+  { id:'btc',      name:'Bitcoin',            catId:'crypto',  defaultDca: 0,   isLoyer:false },
+  { id:'eth',      name:'Ether',              catId:'crypto',  defaultDca: 0,   isLoyer:false },
+  { id:'immo',     name:'Immobilier',         catId:'immo',    defaultDca: 0,   isLoyer:true },
+  { id:'livrets',  name:"Livrets d'Épargne",  catId:'livrets', defaultDca: 0,   isLoyer:false },
+  { id:'ocus',     name:'Ocus',               catId:'anaxago', defaultDca: 0,   isLoyer:false },
+  { id:'onepilot', name:'Onepilot',           catId:'anaxago', defaultDca: 0,   isLoyer:false },
+  { id:'agriodor', name:'Agriodor',           catId:'anaxago', defaultDca: 0,   isLoyer:false },
+  { id:'inicio',   name:'Inicio',             catId:'anaxago', defaultDca: 0,   isLoyer:false },
+  { id:'kiwee',    name:'Kiwee',              catId:'anaxago', defaultDca: 0,   isLoyer:false }
+];
+
+// Historique extrait de l'Excel
+const INITIAL_HISTORY = {
+  '2025-01': {
+    mp:       { start: 0,     contribution: 0,    withdrawal: 0, end: 0 },
+    uaf:      { start: 25000, contribution: 0,    withdrawal: 0, end: 25000 },
+    linxea:   { start: 7984,  contribution: 1500, withdrawal: 0, end: 9192 },
+    iroko:    { start: 51012, contribution: 0,    withdrawal: 0, end: 51012 },
+    remake:   { start: 49980, contribution: 0,    withdrawal: 0, end: 49980 },
+    corum:    { start: 0,     contribution: 0,    withdrawal: 0, end: 0 },
+    pea:      { start: 78881, contribution: 0,    withdrawal: 0, end: 78881 },
+    peapme:   { start: 3231,  contribution: 0,    withdrawal: 0, end: 3468 },
+    btc:      { start: 0,     contribution: 500,  withdrawal: 0, end: 487 },
+    eth:      { start: 0,     contribution: 0,    withdrawal: 0, end: 322 },
+    immo:     { start: 0,     contribution: 340000, withdrawal: 0, end: 350000 },
+    livrets:  { start: 0,     contribution: 0,    withdrawal: 0, end: 0 },
+    ocus:     { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    onepilot: { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    agriodor: { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    inicio:   { start: 0,     contribution: 0,    withdrawal: 0, end: 0 },
+    kiwee:    { start: 15000, contribution: 0,    withdrawal: 0, end: 15000 }
+  },
+  '2026-02': {
+    mp:       { start: 0,     contribution: 2500, withdrawal: 0, end: 2500 },
+    uaf:      { start: 25400, contribution: 0,    withdrawal: 0, end: 25400 },
+    linxea:   { start: 9192,  contribution: 3000, withdrawal: 0, end: 13903 },
+    iroko:    { start: 51012, contribution: 0,    withdrawal: 0, end: 54831 },
+    remake:   { start: 49980, contribution: 0,    withdrawal: 0, end: 52826 },
+    corum:    { start: 0,     contribution: 10000, withdrawal: 0, end: 10000 },
+    pea:      { start: 78881, contribution: 0,    withdrawal: 0, end: 86835 },
+    peapme:   { start: 3468,  contribution: 2800, withdrawal: 0, end: 7808 },
+    btc:      { start: 487,   contribution: 0,    withdrawal: 0, end: 487 },
+    eth:      { start: 322,   contribution: 500,  withdrawal: 0, end: 322 },
+    immo:     { start: 350000, contribution: 3048, withdrawal: 0, end: 350000 },
+    livrets:  { start: 0,     contribution: 32482, withdrawal: 0, end: 32482 },
+    ocus:     { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    onepilot: { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    agriodor: { start: 1250,  contribution: 3000, withdrawal: 0, end: 4250 },
+    inicio:   { start: 0,     contribution: 1250, withdrawal: 0, end: 1250 },
+    kiwee:    { start: 15000, contribution: 0,    withdrawal: 0, end: 15000 }
+  },
+  '2026-03': {
+    mp:       { start: 2500,  contribution: 2500, withdrawal: 0, end: 4982 },
+    uaf:      { start: 25400, contribution: 0,    withdrawal: 0, end: 25409 },
+    linxea:   { start: 13903, contribution: 0,    withdrawal: 0, end: 12607 },
+    iroko:    { start: 54831, contribution: 0,    withdrawal: 0, end: 55360 },
+    remake:   { start: 52826, contribution: 0,    withdrawal: 0, end: 53040 },
+    corum:    { start: 10000, contribution: 1000, withdrawal: 0, end: 11000 },
+    pea:      { start: 86835, contribution: 0,    withdrawal: 0, end: 84251 },
+    peapme:   { start: 7808,  contribution: 1000, withdrawal: 0, end: 8410 },
+    btc:      { start: 487,   contribution: 0,    withdrawal: 0, end: 498 },
+    eth:      { start: 322,   contribution: 0,    withdrawal: 0, end: 336 },
+    immo:     { start: 350000, contribution: 404, withdrawal: 0, end: 350000 },
+    livrets:  { start: 32482, contribution: 0,    withdrawal: 0, end: 32518 },
+    ocus:     { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    onepilot: { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    agriodor: { start: 4250,  contribution: 0,    withdrawal: 0, end: 4250 },
+    inicio:   { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    kiwee:    { start: 15000, contribution: 0,    withdrawal: 0, end: 15000 }
+  },
+  '2026-04': {
+    mp:       { start: 4982,  contribution: 0,    withdrawal: 0, end: 5087 },
+    uaf:      { start: 25409, contribution: 0,    withdrawal: 0, end: 25395 },
+    linxea:   { start: 12607, contribution: 0,    withdrawal: 0, end: 12653 },
+    iroko:    { start: 55360, contribution: 0,    withdrawal: 0, end: 55644 },
+    remake:   { start: 53040, contribution: 0,    withdrawal: 0, end: 53244 },
+    corum:    { start: 11000, contribution: 4000, withdrawal: 0, end: 15000 },
+    pea:      { start: 84251, contribution: 0,    withdrawal: 0, end: 90003 },
+    peapme:   { start: 8410,  contribution: 0,    withdrawal: 0, end: 8502 },
+    btc:      { start: 498,   contribution: 0,    withdrawal: 0, end: 558.71 },
+    eth:      { start: 336,   contribution: 0,    withdrawal: 0, end: 347 },
+    immo:     { start: 350000, contribution: 104, withdrawal: 0, end: 350000 },
+    livrets:  { start: 32518, contribution: 0,    withdrawal: 0, end: 32518 },
+    ocus:     { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    onepilot: { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    agriodor: { start: 4250,  contribution: 0,    withdrawal: 0, end: 4250 },
+    inicio:   { start: 1250,  contribution: 0,    withdrawal: 0, end: 1250 },
+    kiwee:    { start: 15000, contribution: 0,    withdrawal: 0, end: 15000 }
+  }
+};
+
+// CAC 40 hardcodé (valeurs indicatives, mises à jour manuellement)
+const INITIAL_CAC = {
+  '2025-01': 7500, '2025-02': 7950, '2025-03': 8000, '2025-04': 7800,
+  '2025-05': 7900, '2025-06': 7700, '2025-07': 7400, '2025-08': 7350,
+  '2025-09': 7500, '2025-10': 7600, '2025-11': 7400, '2025-12': 7350,
+  '2026-01': 7700, '2026-02': 7850, '2026-03': 7950, '2026-04': 7900
+};
+
+const INITIAL_STATE = {
+  currentScreen: 'dashboard',
+  privateMode: false,
+  currentMonth: '2026-05', // mois de saisie courant
+  categories: CATEGORIES,
+  assets: INITIAL_ASSETS,
+  history: INITIAL_HISTORY,
+  rdt: Object.fromEntries(CATEGORIES.map(c => [c.id, c.defaultRdt])), // taux de rendement attendus
+  immoValorisation: 2.0, // % par an
+  dca: Object.fromEntries(INITIAL_ASSETS.map(a => [a.id, 0])), // versement mensuel programmé
+  credit: {
+    enabled: true,
+    capital: 335000,
+    monthlyPayment: 1277,
+    startDate: '2021-04',
+    durationMonths: 300,
+    annualRate: null // calculé automatiquement
+  },
+  goals: [
+    { id: 'g1', label: '1 M€ patrimoine net', type: 'net', target: 1000000, deadline: '2034-12' },
+    { id: 'g2', label: '3 000 €/mois revenus passifs', type: 'passive', target: 3000, deadline: '2040-12' }
+  ],
+  cac40: INITIAL_CAC,
+  selectedAsset: 'iroko',
+  projectionHorizon: 10,
+  analyseTab: 'asset',
+  projectionTab: 'overview',
+  detailPeriod: '1Y'
+};
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return structuredClone(INITIAL_STATE);
+    const parsed = JSON.parse(raw);
+    // merge avec INITIAL pour gérer les nouvelles clés ajoutées
+    const merged = Object.assign({}, structuredClone(INITIAL_STATE), parsed);
+    // On force la liste des catégories à reprendre celle du code (pour propager renommages et nouvelles couleurs)
+    merged.categories = structuredClone(CATEGORIES);
+    return merged;
+  } catch (e) {
+    return structuredClone(INITIAL_STATE);
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    toast("Erreur de sauvegarde");
+  }
+}
+
+function resetState() {
+  state = structuredClone(INITIAL_STATE);
+  saveState();
+  render();
+}
+
+// =============================================================
+// UTILITAIRES
+// =============================================================
+const MONTH_FR = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
+const MONTH_FR_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function fmtMonth(ym) {
+  const [y, m] = ym.split('-');
+  return MONTH_FR[parseInt(m,10)-1] + ' ' + y;
+}
+function fmtMonthLong(ym) {
+  const [y, m] = ym.split('-');
+  return MONTH_FR_LONG[parseInt(m,10)-1] + ' ' + y;
+}
+function nextMonth(ym) {
+  let [y, m] = ym.split('-').map(Number);
+  m++; if (m > 12) { m = 1; y++; }
+  return `${y}-${String(m).padStart(2,'0')}`;
+}
+function prevMonth(ym) {
+  let [y, m] = ym.split('-').map(Number);
+  m--; if (m < 1) { m = 12; y--; }
+  return `${y}-${String(m).padStart(2,'0')}`;
+}
+function diffMonths(ymStart, ymEnd) {
+  const [y1,m1] = ymStart.split('-').map(Number);
+  const [y2,m2] = ymEnd.split('-').map(Number);
+  return (y2-y1)*12 + (m2-m1);
+}
+function todayYM() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function fmtAmount(n, opts = {}) {
+  if (state.privateMode && !opts.force) return '•••••';
+  if (n == null || isNaN(n)) return '— €';
+  const sign = opts.signed && n > 0 ? '+' : '';
+  const decimals = opts.decimals != null ? opts.decimals : (Math.abs(n) < 100 ? 2 : 0);
+  return sign + Number(n).toLocaleString('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + ' €';
+}
+function fmtPercent(p, opts = {}) {
+  if (p == null || isNaN(p)) return '— %';
+  const sign = opts.signed && p > 0 ? '+' : '';
+  return sign + Number(p).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + ' %';
+}
+function getAsset(id) { return state.assets.find(a => a.id === id); }
+function getCategory(id) { return state.categories.find(c => c.id === id); }
+function assetsInCategory(catId) { return state.assets.filter(a => a.catId === catId); }
+function getAllMonths() {
+  return Object.keys(state.history).sort();
+}
+function lastMonth() {
+  const ms = getAllMonths();
+  return ms.length ? ms[ms.length-1] : '2025-01';
+}
+
+// =============================================================
+// CALCULS PATRIMOINE
+// =============================================================
+
+function valueAt(assetId, ym) {
+  // retourne la valeur "end" de l'actif au mois ym, ou la dernière connue avant
+  const months = getAllMonths();
+  for (let i = months.length - 1; i >= 0; i--) {
+    const m = months[i];
+    if (m <= ym && state.history[m][assetId] != null) {
+      const v = state.history[m][assetId].end;
+      if (v != null && !isNaN(v)) return Number(v);
+    }
+  }
+  return 0;
+}
+
+function patrimoineBrut(ym = lastMonth()) {
+  return state.assets.reduce((sum, a) => sum + valueAt(a.id, ym), 0);
+}
+
+function totalContribution(assetId) {
+  // somme des contributions historiques - retraits
+  let net = 0;
+  for (const m of getAllMonths()) {
+    const h = state.history[m]?.[assetId];
+    if (h) net += (h.contribution || 0) - (h.withdrawal || 0);
+  }
+  return net;
+}
+
+function totalInvestedInAsset(assetId) {
+  // pour calcul +/- value : approximation = somme des apports - retraits
+  let invested = 0;
+  for (const m of getAllMonths()) {
+    const h = state.history[m]?.[assetId];
+    if (h) {
+      invested += (h.contribution || 0) - (h.withdrawal || 0);
+    }
+  }
+  // si pas d'historique de contribution mais une valeur de départ, on considère cette valeur comme l'investissement initial
+  const months = getAllMonths();
+  if (months.length > 0 && invested === 0) {
+    const firstH = state.history[months[0]]?.[assetId];
+    if (firstH && firstH.start) invested = firstH.start;
+  } else if (months.length > 0) {
+    const firstH = state.history[months[0]]?.[assetId];
+    if (firstH && firstH.start) invested += firstH.start;
+  }
+  return invested;
+}
+
+function assetPerf(assetId) {
+  const cur = valueAt(assetId, lastMonth());
+  const invested = totalInvestedInAsset(assetId);
+  const plusMoins = cur - invested;
+  const pct = invested > 0 ? plusMoins / invested * 100 : 0;
+  return { current: cur, invested, plusMoins, pct };
+}
+
+// CRÉDIT IMMO
+function calcAnnualRate() {
+  // résout le taux à partir de capital, mensualité, durée
+  const { capital: P, monthlyPayment: pmt, durationMonths: n } = state.credit;
+  if (!P || !pmt || !n) return 0;
+  let lo = 0, hi = 0.01, mid;
+  for (let i = 0; i < 60; i++) {
+    mid = (lo + hi) / 2;
+    const calcPmt = mid === 0 ? P/n : P * mid / (1 - Math.pow(1+mid, -n));
+    if (calcPmt < pmt) lo = mid; else hi = mid;
+  }
+  return mid * 12; // annuel nominal
+}
+
+function creditCRD(ym = lastMonth()) {
+  if (!state.credit.enabled) return 0;
+  const { capital: P, monthlyPayment: pmt, startDate } = state.credit;
+  const r = calcAnnualRate() / 12;
+  const n = diffMonths(startDate, ym);
+  if (n <= 0) return P;
+  if (n >= state.credit.durationMonths) return 0;
+  // CRD = P(1+r)^n - pmt * ((1+r)^n -1)/r
+  if (r === 0) return Math.max(0, P - pmt*n);
+  const f = Math.pow(1+r, n);
+  return Math.max(0, P * f - pmt * (f - 1) / r);
+}
+
+function patrimoineNet(ym = lastMonth()) {
+  return patrimoineBrut(ym) - creditCRD(ym);
+}
+
+// PERF GLOBALE
+function perfNet() {
+  const months = getAllMonths();
+  if (months.length < 2) return { pct: 0, delta: 0 };
+  const cur = patrimoineNet(lastMonth());
+  const old = patrimoineNet(months[0]);
+  if (!old) return { pct: 0, delta: cur };
+  return { pct: (cur-old)/old*100, delta: cur-old };
+}
+function perfBrut() {
+  const months = getAllMonths();
+  if (months.length < 2) return { pct: 0, delta: 0 };
+  const cur = patrimoineBrut(lastMonth());
+  const old = patrimoineBrut(months[0]);
+  if (!old) return { pct: 0, delta: cur };
+  return { pct: (cur-old)/old*100, delta: cur-old };
+}
+
+// CAC 40
+function perfCac() {
+  const months = getAllMonths();
+  if (months.length < 2) return 0;
+  const first = state.cac40[months[0]];
+  const last = state.cac40[lastMonth()] || state.cac40[months[months.length-1]];
+  if (!first || !last) return 0;
+  return (last-first)/first*100;
+}
+
+// REVENUS PASSIFS
+function revenuPassifAnnuel(assetId) {
+  const a = getAsset(assetId);
+  if (!a) return 0;
+  const rdt = state.rdt[a.catId] || 0;
+  // immo : c'est un loyer théorique (5% de la valeur considéré comme net)
+  // pour la valorisation immo, on n'inclut pas dans les revenus passifs (c'est de la +value)
+  if (a.catId === 'immo') return valueAt(a.id, lastMonth()) * (rdt/100); // ici rdt immo = revalorisation, mais on prend les loyers ailleurs
+  return valueAt(a.id, lastMonth()) * (rdt/100);
+}
+
+function revenuPassifTotal() {
+  return state.assets.reduce((sum,a) => sum + revenuPassifAnnuel(a.id), 0);
+}
+
+// PROJECTION (intérêts composés + DCA)
+function projectAsset(assetId, years) {
+  const a = getAsset(assetId);
+  if (!a) return { final: 0, contribs: 0, interests: 0 };
+  const cur = valueAt(a.id, lastMonth());
+  const r = (state.rdt[a.catId] || 0) / 100;
+  const dca = state.dca[a.id] || 0;
+  // formule capital composé + versement mensuel
+  // FV = P(1+r)^n + PMT * 12 * ((1+r)^n - 1)/r (approx annuelle)
+  // Mieux : composer mensuellement
+  const rm = Math.pow(1+r, 1/12) - 1;
+  const months = years * 12;
+  const fv = cur * Math.pow(1+rm, months) + (dca === 0 ? 0 : dca * (Math.pow(1+rm, months) - 1) / rm);
+  const contribs = dca * months;
+  return { final: fv, contribs, interests: fv - cur - contribs };
+}
+
+function projectionGlobal(years, withDCA = true) {
+  let total = 0, contribs = 0;
+  for (const a of state.assets) {
+    const cur = valueAt(a.id, lastMonth());
+    const r = (state.rdt[a.catId] || 0) / 100;
+    const dca = withDCA ? (state.dca[a.id] || 0) : 0;
+    const rm = Math.pow(1+r, 1/12) - 1;
+    const months = years * 12;
+    const fv = cur * Math.pow(1+rm, months) + (dca === 0 ? 0 : dca * (Math.pow(1+rm, months) - 1) / rm);
+    total += fv;
+    contribs += dca * months;
+  }
+  // crédit : à la fin de l'horizon, soit soldé soit CRD restant
+  const futureYM = addYearsToYM(lastMonth(), years);
+  total -= creditCRD(futureYM);
+  return { net: total, contribs };
+}
+
+function addYearsToYM(ym, years) {
+  const [y, m] = ym.split('-').map(Number);
+  return `${y+years}-${String(m).padStart(2,'0')}`;
+}
+
+// =============================================================
+// RENDU — CHARGEMENT DES ÉCRANS
+// =============================================================
+
+function render() {
+  const app = document.getElementById('app');
+  let html = '';
+  switch (state.currentScreen) {
+    case 'dashboard': html = renderDashboard(); break;
+    case 'saisie':    html = renderSaisie(); break;
+    case 'analyse':   html = renderAnalyse(); break;
+    case 'projection':html = renderProjection(); break;
+    case 'reglages':  html = renderReglages(); break;
+  }
+  app.innerHTML = html;
+  // bottom nav active
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === state.currentScreen);
+  });
+  // rendu graphique éventuel
+  setTimeout(() => attachCharts(), 10);
+}
+
+function go(screen) {
+  state.currentScreen = screen;
+  saveState();
+  window.scrollTo(0, 0);
+  render();
+}
+
+function togglePrivate() {
+  state.privateMode = !state.privateMode;
+  saveState();
+  render();
+}
+
+// =============================================================
+// ECRAN 1 — DASHBOARD
+// =============================================================
+
+let viewMode = 'net'; // 'net' ou 'brut'
+
+function setViewMode(m) { viewMode = m; render(); }
+
+function renderDashboard() {
+  const brut = patrimoineBrut();
+  const crd = creditCRD();
+  const net = brut - crd;
+  const total = viewMode === 'net' ? net : brut;
+  const perf = viewMode === 'net' ? perfNet() : perfBrut();
+  const cacPerf = perfCac();
+
+  // top 3 / flop 3
+  const sortedAssets = state.assets
+    .map(a => ({ asset: a, ...assetPerf(a.id) }))
+    .filter(x => x.invested > 0)
+    .sort((a,b) => b.pct - a.pct);
+  const top3 = sortedAssets.slice(0, 3);
+  // Flop : on exclut Private Equity (capital figé en attente de sortie, pas pertinent dans un classement de perf)
+  const flop3 = sortedAssets.filter(x => x.asset.catId !== 'anaxago').slice(-3).reverse();
+
+  const revAnnuels = revenuPassifTotal();
+  const revMensuels = revAnnuels / 12;
+
+  return `
+  <div style="background:var(--navy);" class="safe-top px-5 pt-6 pb-7 text-white">
+    <div class="flex justify-between items-start mb-4">
+      <div>
+        <p class="text-[10px] tracking-wider" style="color:#94A8C2;">PATRIMOINE · ${fmtMonth(lastMonth()).toUpperCase()}</p>
+        <p class="text-sm mt-0.5" style="color:#E6EBF2;">Bonjour Jeremy</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="togglePrivate()" class="w-9 h-9 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);" aria-label="Mode privé">
+          ${state.privateMode
+            ? `<svg class="w-4 h-4" fill="none" stroke="#E6EBF2" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.4 5.1A10.3 10.3 0 0112 5c5.5 0 10 7 10 7a17 17 0 01-2.5 3.4M6.6 6.6A17 17 0 002 12s4.5 7 10 7c1.2 0 2.3-.2 3.3-.6"/></svg>`
+            : `<svg class="w-4 h-4" fill="none" stroke="#E6EBF2" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2 12s4.5-7 10-7 10 7 10 7-4.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`}
+        </button>
+      </div>
+    </div>
+
+    <div class="inline-flex rounded-lg p-0.5 mb-3" style="background:rgba(255,255,255,0.06);">
+      <button onclick="setViewMode('brut')" class="text-xs px-3 py-1 rounded-md ${viewMode==='brut' ? 'font-medium' : ''}" style="${viewMode==='brut' ? 'background:#fff;color:var(--navy);' : 'background:none;color:#94A8C2;border:none;'}">Brut</button>
+      <button onclick="setViewMode('net')" class="text-xs px-3 py-1 rounded-md ${viewMode==='net' ? 'font-medium' : ''}" style="${viewMode==='net' ? 'background:#fff;color:var(--navy);' : 'background:none;color:#94A8C2;border:none;'}">Net</button>
+    </div>
+
+    <p class="text-3xl font-medium tracking-tight leading-none ${state.privateMode?'priv':''}">${fmtAmount(total).replace(' €','')}<span class="text-lg ml-1" style="color:#94A8C2;">€</span></p>
+
+    <div class="flex items-center gap-2 mt-3">
+      <span class="pill" style="background:rgba(56,128,255,0.18);color:#6FA8FF;">${perf.pct >= 0 ? '↑' : '↓'} ${fmtPercent(perf.pct, {signed:true})}</span>
+      ${cacPerf !== 0 ? `<span class="text-[11px]" style="color:#94A8C2;">vs CAC 40 ${fmtPercent(cacPerf,{signed:true})}</span>` : ''}
+    </div>
+
+    ${viewMode === 'net' && state.credit.enabled ? `
+    <div class="mt-3 pt-3 text-[11px]" style="border-top:0.5px solid rgba(255,255,255,0.08);color:#94A8C2;">
+      <div class="flex justify-between py-0.5"><span>Actifs bruts</span><span style="color:#E6EBF2;">${fmtAmount(brut)}</span></div>
+      <div class="flex justify-between py-0.5"><span>− Crédit immo</span><span style="color:#FF8E8E;">−${fmtAmount(crd)}</span></div>
+    </div>` : ''}
+  </div>
+
+  <div class="px-4 pt-4 space-y-3">
+
+    <!-- Action saisir -->
+    <button onclick="go('saisie')" class="w-full card flex items-center justify-between p-3.5 text-left active:opacity-80">
+      <span class="flex items-center gap-3">
+        <span class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:var(--navy);">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/></svg>
+        </span>
+        <span>
+          <span class="block text-[13px] font-medium" style="color:var(--text);">Saisir ${fmtMonthLong(state.currentMonth)}</span>
+          <span class="block text-[11px] mt-0.5" style="color:var(--text-2);">DCA pré-rempli · saisie en cours</span>
+        </span>
+      </span>
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-2);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+    </button>
+
+    <!-- Évolution vs CAC -->
+    <div class="card p-3.5">
+      <div class="flex justify-between items-center mb-2">
+        <p class="text-[12px] font-medium" style="color:var(--text);">${viewMode==='net'?'Patrimoine net':'Patrimoine brut'} vs CAC 40</p>
+        <span class="text-[10px]" style="color:var(--text-2);">12 mois</span>
+      </div>
+      <div style="height:150px;"><canvas id="chartEvolution"></canvas></div>
+      <div class="flex gap-4 text-[10px] mt-1.5">
+        <span style="color:var(--blue);"><span class="inline-block w-2.5 h-0.5 align-middle mr-1" style="background:var(--blue);"></span>Vous ${fmtPercent(perf.pct,{signed:true})}</span>
+        <span style="color:var(--text-2);"><span class="inline-block w-2.5 h-0.5 align-middle mr-1" style="background:var(--text-2);"></span>CAC ${fmtPercent(cacPerf,{signed:true})}</span>
+      </div>
+    </div>
+
+    <!-- Crédit immo -->
+    ${state.credit.enabled ? `
+    <div class="card p-3.5">
+      <div class="flex justify-between items-center mb-2">
+        <p class="text-[12px] font-medium">Crédit immobilier</p>
+        <span class="text-[10px]" style="color:var(--text-2);">${fmtMonth(state.credit.startDate)} · ${(calcAnnualRate()*100).toFixed(2)} %</span>
+      </div>
+      <div class="flex justify-between items-baseline mb-1.5 text-[11px]">
+        <span style="color:var(--text-2);">Capital remboursé</span>
+        <span class="font-medium">${fmtAmount(state.credit.capital - crd)} / ${fmtAmount(state.credit.capital)}</span>
+      </div>
+      <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--border-soft);">
+        <div class="h-full rounded-full" style="background:var(--blue);width:${(state.credit.capital - crd) / state.credit.capital * 100}%;"></div>
+      </div>
+      <div class="flex justify-between text-[11px] mt-2" style="color:var(--text-2);">
+        <span>Mensualité <strong style="color:var(--text);font-weight:500;">${fmtAmount(state.credit.monthlyPayment)}</strong></span>
+        <span>Fin <strong style="color:var(--text);font-weight:500;">${fmtMonth(addYearsToYM(state.credit.startDate, state.credit.durationMonths/12))}</strong></span>
+      </div>
+    </div>` : ''}
+
+    <!-- Répartition -->
+    <div class="card p-3.5">
+      <p class="text-[12px] font-medium mb-2.5">Répartition</p>
+      <div class="flex items-center gap-3">
+        <div style="width:96px;height:96px;flex-shrink:0;"><canvas id="chartDonut"></canvas></div>
+        <div class="flex-1 text-[11px] space-y-0.5">
+          ${renderRepartition()}
+        </div>
+      </div>
+    </div>
+
+    <!-- Objectifs -->
+    ${state.goals.length > 0 ? `
+    <div class="card p-3.5">
+      <p class="text-[12px] font-medium mb-2.5">Objectifs patrimoniaux</p>
+      ${state.goals.map(g => renderGoalRow(g)).join('')}
+    </div>` : ''}
+
+    <!-- Revenus passifs -->
+    <div class="card p-3.5">
+      <p class="text-[12px] font-medium mb-2">Revenus passifs estimés</p>
+      <div class="flex items-baseline gap-2 mb-2">
+        <span class="text-xl font-medium">${fmtAmount(revMensuels)}<span class="text-xs ml-0.5" style="color:var(--text-2);">/mois</span></span>
+        <span class="text-[11px]" style="color:var(--text-2);">${fmtAmount(revAnnuels)}/an</span>
+      </div>
+      <p class="text-[11px]" style="color:var(--text-2);">Basé sur les taux de rendement configurés.</p>
+    </div>
+
+    <!-- Top / Flop -->
+    <div class="card p-3.5">
+      <p class="text-[12px] font-medium mb-2.5">Top 3 / Flop 3</p>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <p class="text-[10px] mb-1 tracking-wide" style="color:var(--blue);">TOP</p>
+          ${top3.map(x => `<div class="flex justify-between text-[11px] py-0.5"><span class="truncate">${x.asset.name}</span><span class="font-medium" style="color:var(--blue);">${fmtPercent(x.pct,{signed:true})}</span></div>`).join('')}
+        </div>
+        <div>
+          <p class="text-[10px] mb-1 tracking-wide" style="color:var(--red);">FLOP</p>
+          ${flop3.map(x => `<div class="flex justify-between text-[11px] py-0.5"><span class="truncate">${x.asset.name}</span><span class="font-medium" style="color:${x.pct < 0 ? 'var(--red)':'var(--text-2)'};">${fmtPercent(x.pct,{signed:true})}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+  </div>
+  `;
+}
+
+function renderRepartition() {
+  const total = patrimoineBrut();
+  if (!total) return '';
+  return state.categories.map(c => {
+    const sum = assetsInCategory(c.id).reduce((s,a) => s + valueAt(a.id, lastMonth()), 0);
+    const pct = sum / total * 100;
+    if (pct < 0.01) return '';
+    return `<div class="flex justify-between">
+      <span><span class="inline-block w-2 h-2 rounded-sm mr-1.5 align-middle" style="background:${c.color};"></span>${c.name}</span>
+      <span class="font-medium">${fmtPercent(pct)}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderGoalRow(g) {
+  let progress = 0, label = '';
+  if (g.type === 'net') {
+    const cur = patrimoineNet();
+    progress = Math.min(100, cur / g.target * 100);
+    label = `${fmtPercent(progress)} · cible ${fmtMonth(g.deadline)}`;
+  } else if (g.type === 'passive') {
+    const cur = revenuPassifTotal() / 12;
+    progress = Math.min(100, cur / g.target * 100);
+    label = `Actuel ${fmtAmount(cur)} · ${fmtPercent(progress)}`;
+  }
+  return `
+    <div class="mb-2.5">
+      <div class="flex justify-between text-[11px] mb-1"><span>${g.label}</span><span style="color:var(--text-2);">${label}</span></div>
+      <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--border-soft);">
+        <div class="h-full rounded-full" style="background:var(--blue);width:${progress}%;"></div>
+      </div>
+    </div>`;
+}
+
+// =============================================================
+// ECRAN 2 — SAISIE
+// =============================================================
+
+function changeMonth(direction) {
+  state.currentMonth = direction > 0 ? nextMonth(state.currentMonth) : prevMonth(state.currentMonth);
+  saveState();
+  render();
+}
+
+function ensureMonth(ym) {
+  if (!state.history[ym]) state.history[ym] = {};
+}
+
+function getMonthEntry(ym, assetId) {
+  ensureMonth(ym);
+  if (!state.history[ym][assetId]) {
+    // pré-remplir : start = end mois précédent, contribution = DCA, withdrawal = 0
+    const prev = prevMonth(ym);
+    const prevEnd = state.history[prev]?.[assetId]?.end ?? valueAt(assetId, prev);
+    state.history[ym][assetId] = {
+      start: Math.round((prevEnd || 0)*100)/100,
+      contribution: state.dca[assetId] || 0,
+      withdrawal: 0,
+      end: null
+    };
+  }
+  return state.history[ym][assetId];
+}
+
+function updateEntry(assetId, field, value) {
+  const e = getMonthEntry(state.currentMonth, assetId);
+  e[field] = value === '' ? (field === 'end' ? null : 0) : Number(value);
+  saveState();
+}
+
+function renderSaisie() {
+  const ym = state.currentMonth;
+  ensureMonth(ym);
+  // s'assurer que toutes les entrées sont initialisées
+  state.assets.forEach(a => getMonthEntry(ym, a.id));
+
+  const filled = state.assets.filter(a => state.history[ym][a.id].end != null).length;
+  const total = state.assets.length;
+  const pct = total ? filled/total*100 : 0;
+  const dcaTotal = state.assets.reduce((s,a) => s + (state.dca[a.id] || 0), 0);
+
+  let html = `
+  <div style="background:var(--navy);" class="safe-top px-5 pt-6 pb-4 text-white">
+    <div class="flex items-center gap-3 mb-3">
+      <button onclick="go('dashboard')" class="-ml-1 p-1" aria-label="Retour"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+      <p class="text-base font-medium">Saisie mensuelle</p>
+    </div>
+    <div class="flex items-center justify-between rounded-xl p-2" style="background:rgba(255,255,255,0.06);">
+      <button onclick="changeMonth(-1)" class="p-1.5"><svg class="w-4 h-4" fill="none" stroke="#94A8C2" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+      <span class="text-sm font-medium">${fmtMonthLong(ym)}</span>
+      <button onclick="changeMonth(1)" class="p-1.5"><svg class="w-4 h-4" fill="none" stroke="#94A8C2" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="flex justify-between text-[11px] mt-2.5" style="color:#94A8C2;"><span>Progression</span><span><strong style="color:#6FA8FF;font-weight:500;">${filled}</strong> / ${total} actifs</span></div>
+    <div class="h-1 rounded mt-1.5 overflow-hidden" style="background:rgba(255,255,255,0.08);"><div class="h-full" style="background:#6FA8FF;width:${pct}%;"></div></div>
+  </div>
+
+  <div class="px-4 pt-3 pb-3 space-y-4">
+  `;
+
+  for (const cat of state.categories) {
+    const assets = assetsInCategory(cat.id);
+    if (assets.length === 0) continue;
+    html += `<div>
+      <div class="flex items-center gap-1.5 mb-1.5 px-1">
+        <span class="w-1.5 h-1.5 rounded-full" style="background:${cat.color};"></span>
+        <p class="text-[10px] font-medium tracking-wider" style="color:var(--text-2);">${cat.name.toUpperCase()} · ${assets.length} ACTIF${assets.length>1?'S':''}</p>
+      </div>
+      <div class="card overflow-hidden">`;
+    assets.forEach((a, idx) => {
+      const e = state.history[ym][a.id];
+      const isLast = idx === assets.length-1;
+      const isFilled = e.end != null;
+      html += `
+      <div class="p-3 ${isFilled?'':''}" style="${isFilled?'background:var(--blue-bg);':''} ${isLast?'':'border-bottom:0.5px solid var(--border-soft);'}">
+        <div class="flex justify-between items-center mb-2">
+          <div>
+            <p class="text-[13px] font-medium">${a.name}</p>
+            <p class="text-[10px]" style="color:var(--text-2);">Début · ${fmtAmount(e.start, {force:true})}</p>
+          </div>
+          ${isFilled
+            ? `<span class="pill" style="background:var(--blue);color:#fff;">✓ Saisi</span>`
+            : `<span class="text-[10px]" style="color:var(--text-2);">À saisir</span>`}
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <p class="text-[10px] mb-0.5" style="color:var(--text-2);">Valeur fin</p>
+            <input type="number" inputmode="decimal" placeholder="—"
+              value="${e.end != null ? e.end : ''}"
+              onchange="updateEntry('${a.id}','end',this.value); render();"
+              class="num-input ${isFilled?'saved':''}">
+          </div>
+          <div>
+            <p class="text-[10px] mb-0.5" style="color:var(--text-2);">+ Apport</p>
+            <input type="number" inputmode="decimal"
+              value="${e.contribution || ''}"
+              onchange="updateEntry('${a.id}','contribution',this.value);"
+              class="num-input ${state.dca[a.id]>0 ? 'has-dca' : ''}">
+          </div>
+          <div>
+            <p class="text-[10px] mb-0.5" style="color:var(--text-2);">− Retrait</p>
+            <input type="number" inputmode="decimal"
+              value="${e.withdrawal || ''}"
+              onchange="updateEntry('${a.id}','withdrawal',this.value);"
+              class="num-input">
+          </div>
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  html += `
+    <div class="rounded-xl p-3 flex gap-2.5" style="background:var(--blue-bg);border:0.5px solid var(--blue-light);">
+      <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--blue);"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      <div class="text-[11px] leading-snug">
+        <p class="font-medium">Apports DCA pré-remplis</p>
+        <p class="mt-0.5" style="color:var(--text-2);">Total versements programmés · ${fmtAmount(dcaTotal,{force:true})}/mois. Modifiable dans Réglages.</p>
+      </div>
+    </div>
+
+    <button onclick="saveSaisie()" class="w-full py-3 rounded-xl text-sm font-medium" style="background:var(--navy);color:#fff;border:none;">
+      Enregistrer ${fmtMonthLong(ym)}
+    </button>
+  </div>
+  `;
+  return html;
+}
+
+function saveSaisie() {
+  saveState();
+  toast('Mois enregistré ✓');
+}
+
+// =============================================================
+// ECRAN 3 — ANALYSE
+// =============================================================
+
+function setAnalyseTab(t) { state.analyseTab = t; saveState(); render(); }
+function selectAsset(id) { state.selectedAsset = id; saveState(); render(); }
+function setDetailPeriod(p) { state.detailPeriod = p; render(); }
+
+function renderAnalyse() {
+  return `
+  <div style="background:var(--navy);" class="safe-top px-5 pt-6 pb-3 text-white">
+    <p class="text-base font-medium">Analyse</p>
+    <p class="text-[11px] mt-0.5" style="color:#94A8C2;">${state.assets.length} actifs · ${state.categories.length} catégories</p>
+  </div>
+  <div class="bg-white px-4 flex gap-1 border-b" style="border-color:var(--border);">
+    <button onclick="setAnalyseTab('asset')" class="seg-tab ${state.analyseTab==='asset'?'active':''}">Par actif</button>
+    <button onclick="setAnalyseTab('cat')"   class="seg-tab ${state.analyseTab==='cat'?'active':''}">Par catégorie</button>
+    <button onclick="setAnalyseTab('flux')"  class="seg-tab ${state.analyseTab==='flux'?'active':''}">Flux nets</button>
+  </div>
+  <div class="px-4 pt-3 pb-3">
+    ${state.analyseTab === 'asset' ? renderAnalyseAsset() :
+      state.analyseTab === 'cat' ? renderAnalyseCat() : renderAnalyseFlux()}
+  </div>
+  `;
+}
+
+function renderAnalyseAsset() {
+  const a = getAsset(state.selectedAsset) || state.assets[0];
+  const perf = assetPerf(a.id);
+  const rdt = state.rdt[a.catId] || 0;
+  const revAnnuel = perf.current * rdt / 100;
+
+  // TRI approximation : (cur/invested)^(1/n) - 1, n en années
+  const months = getAllMonths();
+  const monthsElapsed = months.length;
+  const triAnnuel = perf.invested > 0 && monthsElapsed > 0
+    ? (Math.pow(perf.current / perf.invested, 12 / monthsElapsed) - 1) * 100
+    : 0;
+
+  return `
+  <div class="card p-3 flex items-center justify-between mb-3">
+    <div>
+      <p class="text-[10px] tracking-wide" style="color:var(--text-2);">ACTIF SÉLECTIONNÉ</p>
+      <select onchange="selectAsset(this.value)" class="text-sm font-medium bg-transparent outline-none mt-0.5" style="color:var(--text);">
+        ${state.categories.map(c => `
+          <optgroup label="${c.name}">
+            ${assetsInCategory(c.id).map(x => `<option value="${x.id}" ${x.id===a.id?'selected':''}>${x.name}</option>`).join('')}
+          </optgroup>
+        `).join('')}
+      </select>
+    </div>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-2);"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+  </div>
+
+  <div class="grid grid-cols-2 gap-2 mb-3">
+    <div class="card p-3"><p class="text-[10px] tracking-wide" style="color:var(--text-2);">VALEUR</p><p class="text-base font-medium mt-1">${fmtAmount(perf.current)}</p></div>
+    <div class="card p-3"><p class="text-[10px] tracking-wide" style="color:var(--text-2);">INVESTI</p><p class="text-base font-medium mt-1">${fmtAmount(perf.invested)}</p></div>
+    <div class="card p-3"><p class="text-[10px] tracking-wide" style="color:var(--text-2);">+/− VALUE</p><p class="text-base font-medium mt-1" style="color:${perf.plusMoins>=0?'var(--blue)':'var(--red)'};">${fmtAmount(perf.plusMoins,{signed:true})}</p></div>
+    <div class="card p-3"><p class="text-[10px] tracking-wide" style="color:var(--text-2);">TRI ANNUEL</p><p class="text-base font-medium mt-1" style="color:${triAnnuel>=0?'var(--blue)':'var(--red)'};">${fmtPercent(triAnnuel,{signed:true})}</p></div>
+  </div>
+
+  <div class="card p-3.5 mb-3">
+    <div class="flex justify-between items-center mb-2">
+      <p class="text-[12px] font-medium">Évolution</p>
+      <div class="flex gap-1 text-[10px]">
+        <button class="chip ${state.detailPeriod==='3M'?'active':''}" onclick="setDetailPeriod('3M')">3M</button>
+        <button class="chip ${state.detailPeriod==='1Y'?'active':''}" onclick="setDetailPeriod('1Y')">1A</button>
+        <button class="chip ${state.detailPeriod==='ALL'?'active':''}" onclick="setDetailPeriod('ALL')">Tout</button>
+      </div>
+    </div>
+    <div style="height:120px;"><canvas id="chartAsset"></canvas></div>
+  </div>
+
+  <div class="card p-3.5 mb-3">
+    <p class="text-[12px] font-medium mb-2">Revenus passifs estimés</p>
+    <div class="flex items-baseline gap-2 mb-1"><span class="text-lg font-medium">${fmtAmount(revAnnuel)}/an</span><span class="text-[11px]" style="color:var(--blue);">${fmtPercent(rdt)} rdt</span></div>
+    <p class="text-[11px]" style="color:var(--text-2);">Soit ~ ${fmtAmount(revAnnuel/12)}/mois · taux configurable</p>
+  </div>
+
+  <div class="card overflow-hidden">
+    <p class="px-3.5 pt-3 pb-2 text-[12px] font-medium">Historique</p>
+    ${getAllMonths().slice().reverse().map(m => {
+      const e = state.history[m]?.[a.id];
+      if (!e || e.end == null) return '';
+      const flow = (e.contribution || 0) - (e.withdrawal || 0);
+      return `<div class="px-3.5 py-2 flex justify-between items-center text-[12px]" style="border-top:0.5px solid var(--border-soft);">
+        <div><span style="color:var(--text-2);">${fmtMonthLong(m)}</span>${flow!==0?`<span class="ml-2 text-[10px]" style="color:${flow>0?'var(--blue)':'var(--red)'};">${flow>0?'+':''}${fmtAmount(flow)}</span>`:''}</div>
+        <span class="font-medium">${fmtAmount(e.end)}</span>
+      </div>`;
+    }).join('')}
+  </div>
+  `;
+}
+
+function renderAnalyseCat() {
+  const total = patrimoineBrut();
+  let html = '';
+  for (const c of state.categories) {
+    const assets = assetsInCategory(c.id);
+    const sum = assets.reduce((s,a) => s + valueAt(a.id, lastMonth()), 0);
+    const invested = assets.reduce((s,a) => s + totalInvestedInAsset(a.id), 0);
+    const plusMoins = sum - invested;
+    const pct = invested > 0 ? plusMoins / invested * 100 : 0;
+    if (sum === 0) continue;
+    html += `
+      <div class="card p-3.5 mb-2">
+        <div class="flex justify-between items-center mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" style="background:${c.color};"></span>
+            <p class="text-[13px] font-medium">${c.name}</p>
+            <span class="text-[10px]" style="color:var(--text-2);">${assets.length} actif${assets.length>1?'s':''}</span>
+          </div>
+          <span class="text-[11px] font-medium" style="color:${pct>=0?'var(--blue)':'var(--red)'};">${fmtPercent(pct,{signed:true})}</span>
+        </div>
+        <div class="flex justify-between text-[11px]">
+          <span style="color:var(--text-2);">Valeur ${fmtAmount(sum)}</span>
+          <span style="color:var(--text-2);">${fmtPercent(sum/total*100)} du patrimoine</span>
+        </div>
+      </div>
+    `;
+  }
+  return html;
+}
+
+function renderAnalyseFlux() {
+  // flux par mois = somme apports - retraits
+  const flux = getAllMonths().map(m => {
+    let net = 0;
+    for (const a of state.assets) {
+      const e = state.history[m][a.id];
+      if (e) net += (e.contribution || 0) - (e.withdrawal || 0);
+    }
+    return { month: m, net };
+  });
+  const totalFlux = flux.reduce((s,x)=>s+x.net,0);
+  const avgFlux = flux.length ? totalFlux/flux.length : 0;
+  return `
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <div class="card p-3"><p class="text-[10px] tracking-wide" style="color:var(--text-2);">TOTAL APPORTS NETS</p><p class="text-base font-medium mt-1" style="color:var(--blue);">${fmtAmount(totalFlux,{signed:true})}</p></div>
+      <div class="card p-3"><p class="text-[10px] tracking-wide" style="color:var(--text-2);">MOYENNE / MOIS</p><p class="text-base font-medium mt-1">${fmtAmount(avgFlux)}</p></div>
+    </div>
+    <div class="card p-3.5 mb-3"><p class="text-[12px] font-medium mb-2">Flux mensuels</p><div style="height:150px;"><canvas id="chartFlux"></canvas></div></div>
+    <div class="card overflow-hidden">
+      <p class="px-3.5 pt-3 pb-2 text-[12px] font-medium">Détail</p>
+      ${flux.slice().reverse().map(f => `
+        <div class="px-3.5 py-2 flex justify-between text-[12px]" style="border-top:0.5px solid var(--border-soft);">
+          <span style="color:var(--text-2);">${fmtMonthLong(f.month)}</span>
+          <span class="font-medium" style="color:${f.net>0?'var(--blue)':f.net<0?'var(--red)':'var(--text-2)'};">${fmtAmount(f.net,{signed:true})}</span>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+// =============================================================
+// ECRAN 4 — PROJECTION
+// =============================================================
+
+function setProjTab(t) { state.projectionTab = t; saveState(); render(); }
+function setHorizon(h) { state.projectionHorizon = h; saveState(); render(); }
+
+function renderProjection() {
+  return `
+  <div style="background:var(--navy);" class="safe-top px-5 pt-6 pb-3 text-white">
+    <p class="text-base font-medium">Projection patrimoniale</p>
+    <p class="text-[11px] mt-0.5" style="color:#94A8C2;">Intérêts composés · DCA inclus</p>
+  </div>
+  <div class="bg-white px-4 flex gap-1 border-b" style="border-color:var(--border);">
+    <button onclick="setProjTab('overview')"  class="seg-tab ${state.projectionTab==='overview'?'active':''}">Vue d'ensemble</button>
+    <button onclick="setProjTab('asset')"     class="seg-tab ${state.projectionTab==='asset'?'active':''}">Par actif</button>
+    <button onclick="setProjTab('hypo')"      class="seg-tab ${state.projectionTab==='hypo'?'active':''}">Hypothèses</button>
+  </div>
+  <div class="px-4 pt-3 pb-3">
+    ${state.projectionTab === 'overview' ? renderProjOverview() :
+      state.projectionTab === 'asset' ? renderProjAsset() : renderProjHypo()}
+  </div>
+  `;
+}
+
+function renderProjOverview() {
+  const y = state.projectionHorizon;
+  const withDca = projectionGlobal(y, true);
+  const woDca = projectionGlobal(y, false);
+  const curNet = patrimoineNet();
+  const ratio = curNet ? withDca.net / curNet : 0;
+  const futureYM = addYearsToYM(lastMonth(), y);
+  const dcaMensuel = state.assets.reduce((s,a)=>s+(state.dca[a.id]||0),0);
+
+  return `
+    <p class="text-[10px] tracking-wide mb-2" style="color:var(--text-2);">HORIZON</p>
+    <div class="flex gap-1.5 mb-3">
+      ${[5,10,15,20].map(h => `<button onclick="setHorizon(${h})" class="chip flex-1 text-center ${state.projectionHorizon===h?'active':''}">${h} ans</button>`).join('')}
+    </div>
+
+    <div class="card p-4 mb-3">
+      <p class="text-[10px] tracking-wide" style="color:var(--text-2);">PATRIMOINE NET EN ${futureYM.split('-')[0]}</p>
+      <p class="text-3xl font-medium tracking-tight mt-1">${fmtAmount(withDca.net).replace(' €','')}<span class="text-lg ml-1" style="color:var(--text-2);">€</span></p>
+      <div class="flex gap-2 text-[11px] mt-1.5"><span class="pill" style="background:var(--blue-bg);color:var(--blue);">× ${ratio.toFixed(2)}</span><span style="color:var(--text-2);">soit ${fmtAmount(withDca.net-curNet,{signed:true})} vs aujourd'hui</span></div>
+      <div style="height:120px;margin-top:14px;"><canvas id="chartProj"></canvas></div>
+      <div class="flex gap-3 text-[10px] mt-2"><span><span class="inline-block w-2.5 h-0.5 align-middle mr-1" style="background:var(--blue);"></span>Avec DCA programmé</span><span style="color:var(--text-2);"><span class="inline-block w-2.5 h-0.5 align-middle mr-1" style="background:var(--text-2);"></span>Sans apport</span></div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <div class="card p-3"><p class="text-[10px] tracking-wide" style="color:var(--text-2);">APPORTS TOTAUX</p><p class="text-base font-medium mt-1">${fmtAmount(withDca.contribs)}</p><p class="text-[10px] mt-0.5" style="color:var(--text-2);">${fmtAmount(dcaMensuel)}/mois</p></div>
+      <div class="card p-3"><p class="text-[10px] tracking-wide" style="color:var(--text-2);">INTÉRÊTS GÉNÉRÉS</p><p class="text-base font-medium mt-1" style="color:var(--blue);">${fmtAmount(withDca.net - woDca.net + (withDca.contribs - 0))}</p><p class="text-[10px] mt-0.5" style="color:var(--text-2);">composés</p></div>
+    </div>
+
+    <div class="rounded-xl p-3 flex gap-2.5" style="background:var(--blue-bg);border:0.5px solid var(--blue-light);">
+      <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--blue);"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div class="text-[11px] leading-snug">
+        <p class="font-medium">Pour ajuster la projection</p>
+        <p class="mt-0.5" style="color:var(--text-2);">Modifie les taux de rendement et les versements DCA dans l'onglet Hypothèses ou les Réglages.</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderProjAsset() {
+  const y = state.projectionHorizon;
+  let html = `<div class="flex gap-1.5 mb-3">${[5,10,15,20].map(h => `<button onclick="setHorizon(${h})" class="chip flex-1 text-center ${state.projectionHorizon===h?'active':''}">${h} ans</button>`).join('')}</div>`;
+  for (const c of state.categories) {
+    const assets = assetsInCategory(c.id);
+    const totalCat = assets.reduce((s,a)=>s+projectAsset(a.id,y).final, 0);
+    if (totalCat === 0) continue;
+    html += `<div class="card overflow-hidden mb-2">
+      <div class="px-3.5 pt-3 pb-2 flex justify-between items-center">
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:${c.color};"></span><p class="text-[13px] font-medium">${c.name}</p><span class="text-[10px]" style="color:var(--text-2);">${fmtPercent(state.rdt[c.id]||0)}/an</span></div>
+        <span class="text-[13px] font-medium">${fmtAmount(totalCat)}</span>
+      </div>`;
+    for (const a of assets) {
+      const cur = valueAt(a.id, lastMonth());
+      const proj = projectAsset(a.id, y);
+      const dca = state.dca[a.id] || 0;
+      html += `<div class="px-3.5 py-2 text-[12px]" style="border-top:0.5px solid var(--border-soft);">
+        <div class="flex justify-between items-center"><span>${a.name}</span><span class="font-medium">${fmtAmount(proj.final)}</span></div>
+        <div class="flex justify-between text-[10px] mt-0.5" style="color:var(--text-2);">
+          <span>Aujourd'hui ${fmtAmount(cur)}${dca>0?` · +${fmtAmount(dca)}/mois`:''}</span>
+          <span style="color:var(--blue);">${fmtAmount(proj.interests,{signed:true})}</span>
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  return html;
+}
+
+function renderProjHypo() {
+  let html = `<p class="text-[11px] mb-3" style="color:var(--text-2);">Modifie les taux de rendement attendus par catégorie (utilisés pour projeter et estimer les revenus passifs).</p>`;
+  html += `<div class="card overflow-hidden mb-3">`;
+  state.categories.forEach((c, idx) => {
+    html += `
+      <div class="px-3.5 py-3 ${idx<state.categories.length-1?'':''}" style="${idx<state.categories.length-1?'border-bottom:0.5px solid var(--border-soft);':''}">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:${c.color};"></span><p class="text-[13px] font-medium">${c.name}</p></div>
+          <span class="text-[13px] font-medium">${fmtPercent(state.rdt[c.id]||0)}</span>
+        </div>
+        <input type="range" min="0" max="20" step="0.5" value="${state.rdt[c.id]||0}"
+          oninput="state.rdt['${c.id}']=parseFloat(this.value); saveState(); render();"
+          class="w-full">
+      </div>`;
+  });
+  html += `</div>`;
+
+  html += `<p class="text-[10px] tracking-wide mb-1.5 mt-4" style="color:var(--text-2);">VERSEMENTS DCA MENSUELS</p>`;
+  html += `<div class="card overflow-hidden">`;
+  state.assets.forEach((a, idx) => {
+    html += `
+      <div class="px-3.5 py-2.5 flex items-center justify-between" style="${idx<state.assets.length-1?'border-bottom:0.5px solid var(--border-soft);':''}">
+        <p class="text-[12px]">${a.name}</p>
+        <div class="flex items-center gap-1">
+          <input type="number" inputmode="decimal" min="0" value="${state.dca[a.id]||''}" placeholder="0"
+            onchange="state.dca['${a.id}']=parseFloat(this.value)||0; saveState();"
+            class="num-input text-right" style="width:80px;">
+          <span class="text-[11px]" style="color:var(--text-2);">€/m</span>
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+// =============================================================
+// ECRAN 5 — RÉGLAGES
+// =============================================================
+
+function updateCredit(field, value) {
+  if (field === 'durationYears') {
+    state.credit.durationMonths = parseInt(value,10) * 12;
+  } else if (field === 'capital' || field === 'monthlyPayment') {
+    state.credit[field] = parseFloat(value) || 0;
+  } else {
+    state.credit[field] = value;
+  }
+  saveState();
+}
+
+function toggleCredit() {
+  state.credit.enabled = !state.credit.enabled;
+  saveState();
+  render();
+}
+
+function renderReglages() {
+  const r = state.credit;
+  const crd = creditCRD();
+  const taux = (calcAnnualRate()*100).toFixed(2);
+
+  return `
+  <div style="background:var(--navy);" class="safe-top px-5 pt-6 pb-3 text-white">
+    <p class="text-base font-medium">Réglages</p>
+  </div>
+  <div class="px-4 pt-4 pb-3 space-y-4">
+
+    <!-- Crédit immo -->
+    <div>
+      <p class="text-[10px] tracking-wider mb-1.5" style="color:var(--text-2);">CRÉDIT IMMOBILIER</p>
+      <div class="card p-3.5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[13px] font-medium">Activer le suivi</span>
+          <button onclick="toggleCredit()" class="${r.enabled?'':'opacity-30'}" style="width:36px;height:20px;background:${r.enabled?'var(--blue)':'#ccc'};border-radius:10px;position:relative;border:none;">
+            <span style="position:absolute;${r.enabled?'right:2px':'left:2px'};top:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:all 0.2s;"></span>
+          </button>
+        </div>
+        ${r.enabled ? `
+        <div class="space-y-2.5 text-[12px]">
+          <div class="flex justify-between items-center"><label style="color:var(--text-2);">Capital initial</label><input type="number" class="num-input text-right" style="width:130px;" value="${r.capital}" onchange="updateCredit('capital',this.value); render();"></div>
+          <div class="flex justify-between items-center"><label style="color:var(--text-2);">Mensualité</label><input type="number" class="num-input text-right" style="width:130px;" value="${r.monthlyPayment}" onchange="updateCredit('monthlyPayment',this.value); render();"></div>
+          <div class="flex justify-between items-center"><label style="color:var(--text-2);">Durée (années)</label><input type="number" class="num-input text-right" style="width:130px;" value="${r.durationMonths/12}" onchange="updateCredit('durationYears',this.value); render();"></div>
+          <div class="flex justify-between items-center"><label style="color:var(--text-2);">Début (AAAA-MM)</label><input type="text" class="num-input text-right" style="width:130px;" value="${r.startDate}" onchange="updateCredit('startDate',this.value); render();"></div>
+          <div class="pt-2 mt-2" style="border-top:0.5px solid var(--border-soft);">
+            <div class="flex justify-between text-[12px]"><span style="color:var(--text-2);">Taux estimé</span><span class="font-medium">${taux} %</span></div>
+            <div class="flex justify-between text-[12px] mt-1"><span style="color:var(--text-2);">Capital restant dû</span><span class="font-medium" style="color:var(--red);">${fmtAmount(crd)}</span></div>
+          </div>
+        </div>
+        ` : '<p class="text-[11px]" style="color:var(--text-2);">Crédit désactivé. Le patrimoine net affiché sera identique au patrimoine brut.</p>'}
+      </div>
+    </div>
+
+    <!-- Objectifs -->
+    <div>
+      <p class="text-[10px] tracking-wider mb-1.5" style="color:var(--text-2);">OBJECTIFS</p>
+      <div class="card overflow-hidden">
+        ${state.goals.map((g, i) => `
+        <div class="px-3.5 py-3" style="${i<state.goals.length-1?'border-bottom:0.5px solid var(--border-soft);':''}">
+          <div class="flex justify-between items-center mb-2">
+            <input type="text" value="${g.label}" onchange="state.goals[${i}].label=this.value; saveState();" class="text-[13px] font-medium bg-transparent outline-none flex-1" style="color:var(--text);">
+            <button onclick="state.goals.splice(${i},1); saveState(); render();" class="text-[11px]" style="color:var(--red);background:none;border:none;">Suppr.</button>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[11px]">
+            <div><label style="color:var(--text-2);">Type</label>
+              <select onchange="state.goals[${i}].type=this.value; saveState();" class="num-input mt-0.5">
+                <option value="net" ${g.type==='net'?'selected':''}>Patrimoine net</option>
+                <option value="passive" ${g.type==='passive'?'selected':''}>Revenus passifs /mois</option>
+              </select>
+            </div>
+            <div><label style="color:var(--text-2);">Cible</label><input type="number" value="${g.target}" onchange="state.goals[${i}].target=parseFloat(this.value)||0; saveState();" class="num-input mt-0.5"></div>
+            <div class="col-span-2"><label style="color:var(--text-2);">Deadline (AAAA-MM)</label><input type="text" value="${g.deadline}" onchange="state.goals[${i}].deadline=this.value; saveState();" class="num-input mt-0.5"></div>
+          </div>
+        </div>`).join('')}
+        <button onclick="addGoal()" class="w-full py-3 text-[12px] font-medium" style="color:var(--blue);background:none;border:none;">+ Ajouter un objectif</button>
+      </div>
+    </div>
+
+    <!-- DCA & rendements (raccourci) -->
+    <div>
+      <p class="text-[10px] tracking-wider mb-1.5" style="color:var(--text-2);">PATRIMOINE</p>
+      <div class="card overflow-hidden">
+        <button onclick="go('projection'); state.projectionTab='hypo'; render();" class="w-full px-3.5 py-3 flex items-center justify-between" style="background:none;border:none;border-bottom:0.5px solid var(--border-soft);">
+          <span class="text-[13px]">DCA & rendements attendus</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-2);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <div class="px-3.5 py-3 text-[11px]" style="color:var(--text-2);">
+          ${state.categories.map(c => `<div class="flex justify-between py-0.5"><span>${c.name}</span><span>${fmtPercent(state.rdt[c.id]||0)} · DCA cat. ${fmtAmount(assetsInCategory(c.id).reduce((s,a)=>s+(state.dca[a.id]||0),0),{force:true})}/mois</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Données -->
+    <div>
+      <p class="text-[10px] tracking-wider mb-1.5" style="color:var(--text-2);">DONNÉES</p>
+      <div class="card overflow-hidden">
+        <button onclick="exportJSON()" class="w-full px-3.5 py-3 flex items-center justify-between" style="background:none;border:none;border-bottom:0.5px solid var(--border-soft);">
+          <span class="text-[13px]">Exporter (JSON)</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-2);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        </button>
+        <label class="w-full px-3.5 py-3 flex items-center justify-between cursor-pointer" style="border-bottom:0.5px solid var(--border-soft);">
+          <span class="text-[13px]">Importer une sauvegarde (JSON)</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-2);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14V7m0 0l-3 3m3-3l3 3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          <input type="file" accept=".json" class="hidden" onchange="importJSON(event)">
+        </label>
+        <label class="w-full px-3.5 py-3 flex items-center justify-between cursor-pointer" style="border-bottom:0.5px solid var(--border-soft);">
+          <span class="text-[13px]">Importer Excel patrimoine.xlsx</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-2);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-6h13M9 11l-6 6 6 6"/></svg>
+          <input type="file" accept=".xlsx,.xls" class="hidden" onchange="importExcel(event)">
+        </label>
+        <button onclick="if(confirm('Réinitialiser toutes les données ?')) resetState();" class="w-full px-3.5 py-3 text-left text-[13px]" style="color:var(--red);background:none;border:none;">
+          Réinitialiser l'application
+        </button>
+      </div>
+    </div>
+
+    <p class="text-center text-[10px] pt-2" style="color:var(--text-3);">v0.1 · Stockage local · Mode privé : ${state.privateMode?'activé':'désactivé'}</p>
+  </div>
+  `;
+}
+
+function addGoal() {
+  state.goals.push({ id: 'g'+Date.now(), label: 'Nouvel objectif', type: 'net', target: 100000, deadline: '2030-12' });
+  saveState();
+  render();
+}
+
+// =============================================================
+// IMPORT / EXPORT
+// =============================================================
+
+function exportJSON() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `patrimoine-${todayYM()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Export JSON téléchargé');
+}
+
+function importJSON(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.assets || !data.history) throw new Error('Format invalide');
+      state = Object.assign({}, structuredClone(INITIAL_STATE), data);
+      saveState();
+      toast('Sauvegarde importée');
+      render();
+    } catch (err) {
+      toast('Erreur : ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function importExcel(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      toast('Excel importé — historique préservé');
+      // pour l'instant, on garde les données déjà initialisées depuis l'Excel
+      // une future version pourra parser les feuilles automatiquement
+    } catch (err) {
+      toast('Erreur lecture Excel : ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// =============================================================
+// GRAPHIQUES (Chart.js)
+// =============================================================
+
+let charts = {};
+
+function attachCharts() {
+  // détruit les graphiques existants
+  Object.values(charts).forEach(c => c && c.destroy && c.destroy());
+  charts = {};
+
+  if (state.currentScreen === 'dashboard') {
+    drawEvolution();
+    drawDonut();
+  } else if (state.currentScreen === 'analyse') {
+    if (state.analyseTab === 'asset') drawAssetChart();
+    if (state.analyseTab === 'flux') drawFluxChart();
+  } else if (state.currentScreen === 'projection') {
+    if (state.projectionTab === 'overview') drawProjChart();
+  }
+}
+
+function fmtK(v) {
+  if (Math.abs(v) >= 1000000) return (v/1000000).toFixed(1).replace('.0','')+' M';
+  if (Math.abs(v) >= 1000) return (v/1000).toFixed(0)+' K';
+  return v.toFixed(0);
+}
+
+function chartCommon(opts = {}) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 600, easing: 'easeOutQuart' },
+    interaction: { mode: 'index', intersect: false },
+    layout: { padding: { top: 8, right: 4, left: 0, bottom: 0 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0A2540',
+        titleColor: '#94A8C2',
+        bodyColor: '#FFFFFF',
+        padding: 10,
+        cornerRadius: 8,
+        titleFont: { size: 11, weight: '500' },
+        bodyFont: { size: 12, weight: '500' },
+        displayColors: true,
+        boxWidth: 8,
+        boxHeight: 8,
+        boxPadding: 4,
+        callbacks: {
+          label: c => {
+            const v = c.parsed.y;
+            const lbl = c.dataset.label || '';
+            return ' ' + (lbl ? lbl + ' : ' : '') + (v == null ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' €');
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false, drawBorder: false },
+        border: { display: false },
+        ticks: { font: { size: 10 }, color: '#94A8C2', maxRotation: 0, autoSkipPadding: 16 }
+      },
+      y: {
+        grid: { color: 'rgba(213,220,229,0.4)', drawBorder: false },
+        border: { display: false },
+        ticks: {
+          font: { size: 10 },
+          color: '#94A8C2',
+          callback: v => fmtK(v) + '€',
+          padding: 6,
+          maxTicksLimit: 5
+        }
+      }
+    }
+  };
+}
+
+// Plugin local pour créer un dégradé bleu sur la courbe principale
+function blueGradient(ctx, chartArea) {
+  if (!chartArea) return 'rgba(30,95,203,0.15)';
+  const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+  g.addColorStop(0, 'rgba(30,95,203,0.32)');
+  g.addColorStop(0.55, 'rgba(30,95,203,0.10)');
+  g.addColorStop(1, 'rgba(30,95,203,0.00)');
+  return g;
+}
+
+function drawEvolution() {
+  const el = document.getElementById('chartEvolution');
+  if (!el) return;
+  const months = getAllMonths();
+  const dataPatrim = months.map(m => viewMode === 'net' ? patrimoineBrut(m) - creditCRD(m) : patrimoineBrut(m));
+  const firstCac = state.cac40[months[0]];
+  const firstP = dataPatrim[0];
+  const dataCac = months.map(m => {
+    const c = state.cac40[m];
+    return c ? firstP * c / firstCac : null;
+  });
+  charts.evolution = new Chart(el, {
+    type: 'line',
+    data: {
+      labels: months.map(fmtMonth),
+      datasets: [
+        {
+          label: 'Patrimoine',
+          data: dataPatrim,
+          borderColor: '#1E5FCB',
+          backgroundColor: ctx => blueGradient(ctx.chart.ctx, ctx.chart.chartArea),
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2.5,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#1E5FCB',
+          pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 2
+        },
+        {
+          label: 'CAC 40 (base 100)',
+          data: dataCac,
+          borderColor: '#6B7B8E',
+          backgroundColor: 'transparent',
+          borderDash: [5, 4],
+          fill: false,
+          tension: 0.4,
+          borderWidth: 1.8,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: '#6B7B8E',
+          pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 2
+        }
+      ]
+    },
+    options: chartCommon()
+  });
+}
+
+function drawDonut() {
+  const el = document.getElementById('chartDonut');
+  if (!el) return;
+  const data = state.categories.map(c => assetsInCategory(c.id).reduce((s,a) => s + valueAt(a.id, lastMonth()), 0));
+  const colors = state.categories.map(c => c.color);
+  charts.donut = new Chart(el, {
+    type: 'doughnut',
+    data: { labels: state.categories.map(c => c.name), datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#FFFFFF', hoverOffset: 6 }] },
+    options: {
+      cutout: '70%',
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: { animateRotate: true, duration: 700 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0A2540', titleColor: '#94A8C2', bodyColor: '#FFFFFF',
+          padding: 10, cornerRadius: 8, titleFont: { size: 11 }, bodyFont: { size: 12 },
+          callbacks: { label: c => ' ' + c.parsed.toLocaleString('fr-FR',{maximumFractionDigits:0}) + ' €' }
+        }
+      }
+    }
+  });
+}
+
+function drawAssetChart() {
+  const el = document.getElementById('chartAsset');
+  if (!el) return;
+  const a = getAsset(state.selectedAsset) || state.assets[0];
+  let months = getAllMonths();
+  if (state.detailPeriod === '3M') months = months.slice(-3);
+  if (state.detailPeriod === '1Y') months = months.slice(-12);
+  const data = months.map(m => state.history[m]?.[a.id]?.end ?? null);
+  charts.asset = new Chart(el, {
+    type: 'line',
+    data: {
+      labels: months.map(fmtMonth),
+      datasets: [{
+        label: a.name,
+        data,
+        borderColor: '#1E5FCB',
+        backgroundColor: ctx => blueGradient(ctx.chart.ctx, ctx.chart.chartArea),
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#1E5FCB',
+        pointBorderColor: '#FFFFFF',
+        pointBorderWidth: 2,
+        pointHoverRadius: 5
+      }]
+    },
+    options: chartCommon()
+  });
+}
+
+function drawFluxChart() {
+  const el = document.getElementById('chartFlux');
+  if (!el) return;
+  const months = getAllMonths();
+  const data = months.map(m => {
+    let net = 0;
+    for (const a of state.assets) {
+      const e = state.history[m][a.id];
+      if (e) net += (e.contribution || 0) - (e.withdrawal || 0);
+    }
+    return net;
+  });
+  charts.flux = new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: months.map(fmtMonth),
+      datasets: [{
+        label: 'Flux net',
+        data,
+        backgroundColor: data.map(v => v >= 0 ? 'rgba(30,95,203,0.85)' : 'rgba(179,38,30,0.85)'),
+        hoverBackgroundColor: data.map(v => v >= 0 ? '#1E5FCB' : '#B3261E'),
+        borderRadius: 6,
+        borderSkipped: false,
+        maxBarThickness: 36
+      }]
+    },
+    options: chartCommon()
+  });
+}
+
+function drawProjChart() {
+  const el = document.getElementById('chartProj');
+  if (!el) return;
+  const y = state.projectionHorizon;
+  const points = [];
+  const pointsWoDca = [];
+  const labels = [];
+  for (let i = 0; i <= y; i++) {
+    labels.push(addYearsToYM(lastMonth(), i).split('-')[0]);
+    points.push(projectionGlobal(i, true).net);
+    pointsWoDca.push(projectionGlobal(i, false).net);
+  }
+  charts.proj = new Chart(el, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Avec DCA',
+          data: points,
+          borderColor: '#1E5FCB',
+          backgroundColor: ctx => blueGradient(ctx.chart.ctx, ctx.chart.chartArea),
+          fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#1E5FCB', pointHoverBorderColor: '#fff', pointHoverBorderWidth: 2
+        },
+        {
+          label: 'Sans apport',
+          data: pointsWoDca,
+          borderColor: '#6B7B8E',
+          backgroundColor: 'transparent',
+          borderDash: [5,4], fill: false, tension: 0.4, borderWidth: 1.8, pointRadius: 0, pointHoverRadius: 4,
+          pointHoverBackgroundColor: '#6B7B8E', pointHoverBorderColor: '#fff', pointHoverBorderWidth: 2
+        }
+      ]
+    },
+    options: chartCommon()
+  });
+}
+
+// =============================================================
+// TOAST
+// =============================================================
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => t.classList.add('hidden'), 2500);
+}
+
+// =============================================================
+// INIT
+// =============================================================
+window.addEventListener('load', () => {
+  render();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+});
+</script>
+</body>
+</html>
