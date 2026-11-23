@@ -45,7 +45,7 @@ Pour restaurer sur un autre appareil :
 ├── manifest.webmanifest    # Manifest PWA
 ├── sw.js                   # Service worker (cache offline)
 ├── data/indices.json       # Clôtures mensuelles CAC 40 / S&P 500 (créé et mis à jour par le robot)
-├── scripts/update-indices.mjs            # Script qui récupère les indices
+├── scripts/update_indices.py             # Script qui récupère les indices
 ├── .github/workflows/update-indices.yml  # Planification quotidienne (GitHub Actions)
 ├── icon.svg                # Icône vectorielle
 ├── icon-192.png            # Icône PWA Android
@@ -67,7 +67,7 @@ Compatible avec n'importe quel hébergement statique :
 
 ## Mise à jour automatique des indices (CAC 40, S&P 500)
 
-Un robot GitHub Actions récupère chaque soir de bourse les clôtures mensuelles (Yahoo Finance, Stooq en secours) et les enregistre dans `data/indices.json`. L'app relit ce fichier à chaque ouverture : rien à saisir à la main.
+Un robot GitHub Actions récupère chaque soir de bourse les clôtures mensuelles (Yahoo Finance, FRED en secours pour le S&P 500) et les enregistre dans `data/indices.json`. L'app relit ce fichier à chaque ouverture : rien à saisir à la main.
 
 Mise en route (une seule fois) :
 
