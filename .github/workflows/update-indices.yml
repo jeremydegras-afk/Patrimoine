@@ -20,11 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: 20
+          python-version: '3.12'
+      - name: Installer yfinance
+        run: pip install --quiet --upgrade yfinance
       - name: Récupérer les clôtures mensuelles
-        run: node scripts/update-indices.mjs
+        run: python scripts/update_indices.py
       - name: Publier data/indices.json si modifié
         run: |
           git config user.name "github-actions[bot]"
