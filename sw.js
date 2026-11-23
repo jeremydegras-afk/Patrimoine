@@ -1,6 +1,6 @@
 // Service Worker — Mon Patrimoine
 // Stratégie : cache-first pour les assets statiques, network-first sinon
-const CACHE = 'patrimoine-v2';
+const CACHE = 'patrimoine-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -32,6 +32,20 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // Indices boursiers : toujours le réseau d'abord (données fraîches), cache en secours hors-ligne
+  if (e.request.url.includes('indices.json')) {
+    const key = e.request.url.split('?')[0];
+    e.respondWith(
+      fetch(e.request).then(resp => {
+        if (resp && resp.status === 200) {
+          const clone = resp.clone();
+          caches.open(CACHE).then(c => c.put(key, clone));
+        }
+        return resp;
+      }).catch(() => caches.match(key))
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fetchPromise = fetch(e.request).then(resp => {
