@@ -1,0 +1,38 @@
+name: Mise à jour des indices (CAC 40, S&P 500)
+
+on:
+  schedule:
+    # du lundi au vendredi à 21h30 UTC (après la clôture de New York en hiver),
+    # et le samedi matin pour capter la clôture du vendredi en heure d'été
+    - cron: '30 21 * * 1-5'
+    - cron: '0 6 * * 6'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-indices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Récupérer les clôtures mensuelles
+        run: node scripts/update-indices.mjs
+      - name: Publier data/indices.json si modifié
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/indices.json
+          if git diff --cached --quiet; then
+            echo "Aucun changement"
+          else
+            git commit -m "Indices : mise à jour automatique"
+            git push
+          fi
